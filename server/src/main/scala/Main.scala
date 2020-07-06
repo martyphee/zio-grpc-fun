@@ -50,12 +50,13 @@ object ExampleServer extends App {
       _ <- (putStr(".") *> ZIO.sleep(30.second)).forever
     } yield ()
 
-  def serverLive(port: Int): ZLayer[Console, Nothing, Server] = {
-    val layerServiceB: ZLayer[Console, Nothing, Console with ServiceB] = Console.live ++ ServiceB.live
-    val layerServiceA: ZLayer[Console, Nothing, ServiceA] = layerServiceB >>> ServiceA.live
-    val layer: ZLayer[Console, Nothing, GreeterService.GreeterService] = (Clock.live ++ layerServiceA) >>> GreeterService.live
+  def serverLive(port: Int): Layer[Nothing, Server] = {
+    // val layerServiceB: Layer[Nothing, Console with ServiceB] = Console.live ++ (Console.live >>> ServiceB.live)
+    // val layerServiceA: Layer[Nothing, ServiceA] = layerServiceB >>> ServiceA.live
+    // val layer: Layer[Nothing, GreeterService.GreeterService] = (Clock.live ++ layerServiceA) >>> GreeterService.live
 
-    layer >>> Server.live[Greeter](
+    (Clock.live ++ ((Console.live ++ (Console.live >>> ServiceB.live)) >>> ServiceA.live)) >>> 
+    GreeterService.live >>> Server.live[Greeter](
       ServerBuilder.forPort(port)
     )
   }
