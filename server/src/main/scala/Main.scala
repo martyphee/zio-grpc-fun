@@ -7,11 +7,13 @@ import zio.console.{Console, _}
 import zio.duration._
 import zio.stream.Stream
 import zio._
+import env.ServiceA
+import env.ServiceB
 
 object GreeterService {
   type GreeterService = Has[Greeter]
 
-  class LiveService(clock: Clock.Service) extends Greeter {
+  class LiveService(clock: Clock.Service, service: ServiceA.Service) extends Greeter {
     def greet(req: Request): IO[Status, Response] =
       clock.sleep(300.millis) *> zio.IO.succeed(
         Response(resp = "hello " + req.name)
@@ -37,8 +39,8 @@ object GreeterService {
     }
   }
 
-  val live: ZLayer[Clock, Nothing, GreeterService] =
-    ZLayer.fromService(new LiveService(_))
+  val live: ZLayer[Clock with ServiceA, Nothing, GreeterService] =
+    ZLayer.fromServices[Clock.Service, ServiceA.Service, Greeter] (new LiveService(_,_))
 }
 
 object ExampleServer extends App {
@@ -48,10 +50,15 @@ object ExampleServer extends App {
       _ <- (putStr(".") *> ZIO.sleep(30.second)).forever
     } yield ()
 
-  def serverLive(port: Int): Layer[Nothing, Server] =
-    Clock.live >>> GreeterService.live >>> Server.live[Greeter](
+  def serverLive(port: Int): ZLayer[Console, Nothing, Server] = {
+    val layerServiceB: ZLayer[Console, Nothing, Console with ServiceB] = Console.live ++ ServiceB.live
+    val layerServiceA: ZLayer[Console, Nothing, ServiceA] = layerServiceB >>> ServiceA.live
+    val layer: ZLayer[Console, Nothing, GreeterService.GreeterService] = (Clock.live ++ layerServiceA) >>> GreeterService.live
+
+    layer >>> Server.live[Greeter](
       ServerBuilder.forPort(port)
     )
+  }
 
   def run(args: List[String]): URIO[Any with Console, ExitCode] = myAppLogic.exitCode
 
