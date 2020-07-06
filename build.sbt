@@ -7,7 +7,6 @@ ThisBuild / cancelable in Global := true
 ThisBuild / connectInput := true
 
 val grpcVersion = "1.30.1"
-val zioGrpcVersion = "0.3.0"
 
 lazy val protos = crossProject(JVMPlatform)
   .in(file("protos"))
@@ -27,9 +26,17 @@ lazy val protos = crossProject(JVMPlatform)
   )
 
 lazy val server = project
-    .dependsOn(protos.jvm)
-    .settings(
-      libraryDependencies ++= Seq(
-        "io.grpc" % "grpc-netty" % grpcVersion,
-      ),
-    )
+  .dependsOn(protos.jvm)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.grpc" % "grpc-netty" % grpcVersion,
+    ),
+  )
+
+lazy val clients = project
+  .dependsOn(protos.jvm)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.grpc" % "grpc-netty" % grpcVersion,
+    ),
+  )
