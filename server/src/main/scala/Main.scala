@@ -15,7 +15,7 @@ object GreeterService {
 
   class LiveService(clock: Clock.Service, service: ServiceA.Service) extends Greeter {
     def greet(req: Request): IO[Status, Response] =
-      clock.sleep(300.millis) *> zio.IO.succeed(
+      clock.sleep(300.millis) *> service.sayHiA(req.name) *> zio.IO.succeed(
         Response(resp = "hello " + req.name)
       )
 
@@ -55,10 +55,10 @@ object ExampleServer extends App {
     // val layerServiceA: Layer[Nothing, ServiceA] = layerServiceB >>> ServiceA.live
     // val layer: Layer[Nothing, GreeterService.GreeterService] = (Clock.live ++ layerServiceA) >>> GreeterService.live
 
-    (Clock.live ++ ((Console.live ++ (Console.live >>> ServiceB.live)) >>> ServiceA.live)) >>> 
-    GreeterService.live >>> Server.live[Greeter](
-      ServerBuilder.forPort(port)
-    )
+    (Clock.live ++ ((Console.live ++ (Console.live >>> ServiceB.live)) >>> 
+      ServiceA.live)) >>> 
+      GreeterService.live >>> 
+      Server.live[Greeter](ServerBuilder.forPort(port))
   }
 
   def run(args: List[String]): URIO[Any with Console, ExitCode] = myAppLogic.exitCode
